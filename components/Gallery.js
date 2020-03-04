@@ -3,6 +3,7 @@ import { StyleSheet, View, Button, Modal, Image } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import ImageContainer from './ImageContainer';
 import ImageViewer from 'react-native-image-zoom-viewer';
+import { Bubbles } from 'react-native-loader';
 import axios from 'axios';
 
 export default function Gallery({ route }) {
@@ -10,6 +11,7 @@ export default function Gallery({ route }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [page, setPage] = useState(1);
     const [modalVisible, setModalVisible] = useState(false);
+    const [loading, setloading] = useState(true);
 
     const { searchString } = route.params;
 
@@ -18,32 +20,36 @@ export default function Gallery({ route }) {
     }
 
     function createUrlList(array){
-        return array.map(item => { 
+        return array.map(image => {
             return {
-                id: item.id,
-                url: item.file_url,
-                preview_url: item.preview_file_url
+                id: image.id,
+                url: image.file_url,
+                preview_url: image.preview_file_url,
+                artist: image.tag_string_artist,
+                tags: image.tag_string,
             }
         });
     }
 
     function getPosts() {
-        axios.get(`https://testbooru.donmai.us/posts.json?page=${page}&tags=${splitSearchString()}`)
+        const booruType = 'dan' //'test' or 'dan'
+        axios.get(`https://${booruType}booru.donmai.us/posts.json?page=${page}&tags=${splitSearchString()}`)
             .then(res => {
                 setPosts(prevPosts => prevPosts.concat(createUrlList(res.data)));
                 setPage(prevPage => prevPage + 1);
                 
                 console.info(`Fetched! Now on page ${page}`);
-                console.info(`posts has ${posts.length} item(s)`);
+                setloading(false);
             })
             .catch(err => console.error(`Error in API call to Danbooru posts : ${err}`));
     }
 
     function cleanPosts() {
         setPosts([]);
-        setPage(1);
         setCurrentIndex(0);
+        setPage(1);
         setModalVisible(false);
+        setloading(true);
         console.info('Cleaned up Gallery');
     }
 
@@ -65,29 +71,39 @@ export default function Gallery({ route }) {
 
     return (
         <ScrollView style={styles.container}>
-            <Modal
-            visible={modalVisible}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => hideImageViewer()}
-            >
-                <ImageViewer
-                imageUrls={posts}
-                index={currentIndex}
-                enablePreload={true}
-                onChange={position => console.info(`Pos: ${position + 1}`)}/>
-            </Modal>
-            <View style={styles.gallery}>
-                { posts.map((item, index) => (
-                    <ImageContainer
-                    key={item.id}
-                    imageData={item}
-                    index={index}
-                    showImageViewer={showImageViewer}/>
-                    ))
-                }
-            </View>
-            <Button onPress={() => getPosts()} title='Load More' color='#f1935c'/>
+            { loading
+            ? 
+                <View style={styles.centeredContainer}>
+                    <Bubbles size={15} color='#DE5028'/>
+                </View>
+            :
+            <>
+                <Modal
+                visible={modalVisible}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => hideImageViewer()}
+                >
+                    <ImageViewer
+                    imageUrls={posts}
+                    index={currentIndex}
+                    enablePreload={true}
+                    loadingRender={() => <Bubbles size={20} color='#DE5028'/>}
+                    onChange={position => (position + 1) === posts.length ? getPosts() : null}/>
+                </Modal>
+                <View style={styles.gallery}>
+                    { posts.map((item, index) => (
+                        <ImageContainer
+                        key={item.id}
+                        imageData={item}
+                        index={index}
+                        showImageViewer={showImageViewer}/>
+                        ))
+                    }
+                </View>
+                <Button onPress={() => getPosts()} title='Load More' color='#DE5028'/>
+            </>
+            }
         </ScrollView>
     )
 }
@@ -97,6 +113,12 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#1f202c',
     },
+    centeredContainer: {
+        paddingTop: 100,
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     gallery: {
         flex: 1,
         flexDirection: 'row',
@@ -105,12 +127,4 @@ const styles = StyleSheet.create({
         paddingHorizontal: 5,
         paddingTop: 20,
     },
-    bigText: {
-        fontSize: 24,
-        color: '#CC9B81',
-    },
-    image: {
-        height: 150,
-        width: 150,
-    }
 });
