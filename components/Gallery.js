@@ -17,9 +17,12 @@ export default function Gallery({ route }) {
         return searchString.split(' ').join('+').toLowerCase();
     }
 
-    function createUrlList(currPosts){
-        let list = currPosts.map(item => { return {url: item.file_url} });
-        return list;
+    function createUrlList(array){
+        return array.map(item => { return {url: item.file_url} });
+    }
+
+    function createPreviewUrlList(array){
+        return array.map(item => item.preview_file_url);
     }
 
     function getPosts() {
@@ -27,7 +30,6 @@ export default function Gallery({ route }) {
             .then(res => {
                 setPosts(prevPosts => prevPosts.concat(res.data));
                 setPage(prevPage => prevPage + 1);
-                setUrlList(createUrlList(posts));
                 
                 console.info(`Fetched! Now on page ${page}`);
                 urlList.forEach(item => console.info(item));
