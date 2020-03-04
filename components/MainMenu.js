@@ -9,15 +9,20 @@ export default function MainMenu({ navigation }) {
     return (
         <View style={styles.container}>
             <Image style={styles.mainIcon} source={logo}/>
-            <TextInput
-            style={styles.searchBar}
-            value={searchText}
-            onChangeText={(text) => setSearchText(text)}
-            placeholder="Tags to search for..."
-            />
+            <View style={styles.containerRow}>
+                <TextInput
+                style={styles.searchBar}
+                value={searchText}
+                onChangeText={(text) => setSearchText(text)}
+                placeholder="Tags to search for..."
+                />
+                <Button
+                style={styles.clearButton}
+                onPress={() => setSearchText('')}
+                title="Clear"/>
+            </View>
             <View style={{ marginTop: 15 }}>
                 <Button
-                style={styles.primaryButton}
                 onPress={() => navigation.navigate('Gallery', { searchString: searchText })}
                 title="   Search   "
                 color="#f1935c"
@@ -34,18 +39,17 @@ const styles = StyleSheet.create({
         backgroundColor: '#1f202c',
         alignItems: 'center',
     },
+    containerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     mainIcon: {
         width: 200,
         height: 200,
     },
-    bigText: {
-        fontSize: 24,
-        color: '#CC9B81',
-    },
     searchBar: {
         color: '#fafafa',
-        marginTop: 15,
-        width: 250,
+        marginRight: 10,
         paddingVertical: 10,
         paddingHorizontal: 15,
         fontSize: 16,
@@ -53,5 +57,8 @@ const styles = StyleSheet.create({
         borderRadius: 3,
         borderStyle: 'solid',
         borderColor: '#f1935c',
+    },
+    clearButton: {
+        marginLeft: 10,
     },
 });

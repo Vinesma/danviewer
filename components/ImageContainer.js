@@ -4,9 +4,10 @@ import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function ImageContainer(props) {
     const imageData = props.imageData;
+    const index = props.index;
 
     return (
-        <TouchableOpacity>
+        <TouchableOpacity onPress={props.onPress(index)}>
             <View style={styles.container}>
                 <Image
                 style={styles.image}
@@ -18,7 +19,6 @@ export default function ImageContainer(props) {
 
 const styles = StyleSheet.create({
     container: {
-        marginRight: 10,
         marginBottom: 6,
     },
     image: {
