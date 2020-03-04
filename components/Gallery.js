@@ -7,9 +7,9 @@ import axios from 'axios';
 
 export default function Gallery({ route }) {
     const [posts, setPosts] = useState([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
     const [page, setPage] = useState(1);
     const [modalVisible, setModalVisible] = useState(false);
-    const [urlList, setUrlList] = useState([]);
 
     const { searchString } = route.params;
 
@@ -18,29 +18,31 @@ export default function Gallery({ route }) {
     }
 
     function createUrlList(array){
-        return array.map(item => { return {url: item.file_url} });
-    }
-
-    function createPreviewUrlList(array){
-        return array.map(item => item.preview_file_url);
+        return array.map(item => { 
+            return {
+                id: item.id,
+                url: item.file_url,
+                preview_url: item.preview_file_url
+            }
+        });
     }
 
     function getPosts() {
         axios.get(`https://testbooru.donmai.us/posts.json?page=${page}&tags=${splitSearchString()}`)
             .then(res => {
-                setPosts(prevPosts => prevPosts.concat(res.data));
+                setPosts(prevPosts => prevPosts.concat(createUrlList(res.data)));
                 setPage(prevPage => prevPage + 1);
                 
                 console.info(`Fetched! Now on page ${page}`);
-                urlList.forEach(item => console.info(item));
+                console.info(`posts has ${posts.length} item(s)`);
             })
             .catch(err => console.error(`Error in API call to Danbooru posts : ${err}`));
     }
 
     function cleanPosts() {
         setPosts([]);
-        setUrlList([]);
         setPage(1);
+        setCurrentIndex(0);
         setModalVisible(false);
         console.info('Cleaned up Gallery');
     }
@@ -51,12 +53,14 @@ export default function Gallery({ route }) {
         return () => cleanPosts();
     }, []);
 
-    function showImageViewer(imageUrl){
+    function showImageViewer(index){
+        setCurrentIndex(index);
         setModalVisible(true);
     }
 
     function hideImageViewer(){
         setModalVisible(false);
+        setCurrentIndex(0);
     }
 
     return (
@@ -64,9 +68,14 @@ export default function Gallery({ route }) {
             <Modal
             visible={modalVisible}
             animationType="slide"
+            transparent={true}
             onRequestClose={() => hideImageViewer()}
             >
-                <ImageViewer imageUrls={urlList}/>
+                <ImageViewer
+                imageUrls={posts}
+                index={currentIndex}
+                enablePreload={true}
+                onChange={position => console.info(`Pos: ${position + 1}`)}/>
             </Modal>
             <View style={styles.gallery}>
                 { posts.map((item, index) => (
