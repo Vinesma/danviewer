@@ -1,13 +1,13 @@
 import React from 'react';
-import { StyleSheet, View, Image} from 'react-native';
+import { StyleSheet, View, Image, Button} from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function ImageContainer(props) {
     const imageData = props.imageData;
-    const index = props.index;
+    const imageUrl = props.imageData.file_url;
 
     return (
-        <TouchableOpacity onPress={props.onPress(index)}>
+        <TouchableOpacity onPress={() => props.showImageViewer(imageUrl)}>
             <View style={styles.container}>
                 <Image
                 style={styles.image}
