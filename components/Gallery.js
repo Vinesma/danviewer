@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Modal, Text, FlatList } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { Bubbles } from 'react-native-loader';
 import ImageContainer from './ImageContainer';
@@ -81,7 +80,10 @@ export default function Gallery({ route }) {
             ? 
                 <View style={styles.centeredContainer}>
                     <Bubbles size={15} color='#DE5028'/>
-                    { loadingError ? <Text>Couldn't retrieve posts, check your connection or try again later</Text> : null}
+                    { loadingError
+                    ? <Text>Couldn't retrieve posts, check your connection or try again later</Text> 
+                    : null
+                    }
                 </View>
             :
             <>
@@ -96,19 +98,22 @@ export default function Gallery({ route }) {
                     index={currentIndex}
                     enablePreload={true}
                     loadingRender={() => <Bubbles size={20} color='#DE5028'/>}
-                    renderFooter={() => <Text>Artist: {posts[currentIndex].artist}</Text>}
-                    onChange={position => (position + 1) === posts.length ? getPosts() : null}/>
+                    renderFooter={() => <Text style={styles.textArtist}>Artist: {posts[currentIndex].artist}</Text>}
+                    onChange={position => (position + 1) === posts.length ? getPosts() : null}
+                    />
                 </Modal>
-                <View style={styles.gallery}>
-                    { posts.map((item, index) => (
-                        <ImageContainer
-                        key={item.id}
-                        imageData={item}
-                        index={index}
-                        showImageViewer={showImageViewer}/>
-                        ))
-                    }
-                </View>
+                <FlatList
+                style={styles.gallery}
+                data={posts}
+                numColumns={3}
+                onEndReachedThreshold={0.3}
+                onEndReached={() => getPosts()}
+                renderItem={
+                    ({item, index}) => (
+                        <ImageContainer imageData={item} index={index} showImageViewer={showImageViewer}/>
+                    )
+                }
+                />
             </>
             }
         </View>
@@ -127,11 +132,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     gallery: {
-        flex: 1,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-around',
-        paddingHorizontal: 5,
+        paddingHorizontal: 4,
         paddingTop: 20,
+    },
+    textArtist: {
+        marginBottom: 10,
+        fontSize: 18,
+        textAlign: 'center',
+        color: '#f4f4f4',
     },
 });
