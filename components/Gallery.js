@@ -20,30 +20,33 @@ export default function Gallery({ route }) {
     }
 
     function createUrlList(array){
-        return array.map(image => {
+        return array.map(elem => {
             return {
                 id: Math.floor(Math.random() * 10000000),
-                url: image.file_url,
-                preview_url: image.preview_file_url,
-                artist: image.tag_string_artist,
-                tags: image.tag_string,
+                url: elem.file_url,
+                preview_url: elem.preview_file_url,
+                artist: elem.tag_string_artist,
+                tags: elem.tag_string,
+                width: elem.image_width,
+                height: elem.image_height,
             }
         });
     }
 
     function getPosts() {
-        const booruType = 'dan' //'test' or 'dan'
+        const booruType = 'dan'; //'test' or 'dan'
         axios.get(`https://${booruType}booru.donmai.us/posts.json?page=${page}&tags=${splitSearchString()}`)
             .then(res => {
                 setPosts(prevPosts => prevPosts.concat(createUrlList(res.data)));
                 setPage(prevPage => prevPage + 1);
+                setLoading(false);
                 
                 console.info(`Fetched! Now on page ${page}`);
-                setLoading(false);
             })
             .catch(err => {
                 setLoadingError(true);
                 setLoading(true);
+
                 console.error(`Error during API call to ${booruType}booru: ${err}`);
             });
     }
@@ -55,14 +58,9 @@ export default function Gallery({ route }) {
         setModalVisible(false);
         setLoading(true);
         setLoadingError(false);
+
         console.info('Cleaned up Gallery');
     }
-
-    useEffect(() => {
-        getPosts();
-
-        return () => cleanPosts();
-    }, []);
 
     function showImageViewer(index){
         setCurrentIndex(index);
@@ -74,14 +72,31 @@ export default function Gallery({ route }) {
         setCurrentIndex(0);
     }
 
+    function fetchOnEndOfImageList(index){
+        if ((index + 1) === posts.length){
+            getPosts();
+        }
+    }
+
+    useEffect(() => {
+        getPosts();
+
+        return () => cleanPosts();
+    }, []);
+
     return (
         <View style={styles.container}>
             { loading
             ? 
-                <View style={styles.centeredContainer}>
+                <View style={styles.paddedCenteredContainer}>
                     <Bubbles size={15} color='#DE5028'/>
                     { loadingError
-                    ? <Text>Couldn't retrieve posts, check your connection or try again later</Text> 
+                    ?
+                        <Text
+                        style={styles.mainText}
+                        >
+                            Couldn't retrieve posts, check your connection or try again later
+                        </Text>
                     : null
                     }
                 </View>
@@ -98,8 +113,12 @@ export default function Gallery({ route }) {
                     index={currentIndex}
                     enablePreload={true}
                     loadingRender={() => <Bubbles size={20} color='#DE5028'/>}
-                    renderFooter={() => <Text style={styles.textArtist}>Artist: {posts[currentIndex].artist}</Text>}
-                    onChange={position => (position + 1) === posts.length ? getPosts() : null}
+                    renderFooter={() => <Text style={styles.mainText}>Artist: {posts[currentIndex].artist}</Text>
+                    }
+                    onChange={position => {
+                        setCurrentIndex(position);
+                        fetchOnEndOfImageList(position);
+                    }}
                     />
                 </Modal>
                 <FlatList
@@ -126,6 +145,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#1f202c',
     },
     centeredContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    paddedCenteredContainer: {
         paddingTop: 100,
         flex: 1,
         alignItems: 'center',
@@ -135,10 +159,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
         paddingTop: 20,
     },
-    textArtist: {
+    mainText: {
         marginBottom: 10,
         fontSize: 18,
-        textAlign: 'center',
         color: '#f4f4f4',
     },
 });
