@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Button, Modal, Image } from 'react-native';
+import { StyleSheet, View, Modal, Text, FlatList } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import ImageContainer from './ImageContainer';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { Bubbles } from 'react-native-loader';
+import ImageContainer from './ImageContainer';
 import axios from 'axios';
 
 export default function Gallery({ route }) {
@@ -11,7 +11,8 @@ export default function Gallery({ route }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [page, setPage] = useState(1);
     const [modalVisible, setModalVisible] = useState(false);
-    const [loading, setloading] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [loadingError, setLoadingError] = useState(false);
 
     const { searchString } = route.params;
 
@@ -22,7 +23,7 @@ export default function Gallery({ route }) {
     function createUrlList(array){
         return array.map(image => {
             return {
-                id: image.id,
+                id: Math.floor(Math.random() * 10000000),
                 url: image.file_url,
                 preview_url: image.preview_file_url,
                 artist: image.tag_string_artist,
@@ -39,9 +40,13 @@ export default function Gallery({ route }) {
                 setPage(prevPage => prevPage + 1);
                 
                 console.info(`Fetched! Now on page ${page}`);
-                setloading(false);
+                setLoading(false);
             })
-            .catch(err => console.error(`Error in API call to Danbooru posts : ${err}`));
+            .catch(err => {
+                setLoadingError(true);
+                setLoading(true);
+                console.error(`Error during API call to ${booruType}booru: ${err}`);
+            });
     }
 
     function cleanPosts() {
@@ -49,7 +54,8 @@ export default function Gallery({ route }) {
         setCurrentIndex(0);
         setPage(1);
         setModalVisible(false);
-        setloading(true);
+        setLoading(true);
+        setLoadingError(false);
         console.info('Cleaned up Gallery');
     }
 
@@ -70,11 +76,12 @@ export default function Gallery({ route }) {
     }
 
     return (
-        <ScrollView style={styles.container}>
+        <View style={styles.container}>
             { loading
             ? 
                 <View style={styles.centeredContainer}>
                     <Bubbles size={15} color='#DE5028'/>
+                    { loadingError ? <Text>Couldn't retrieve posts, check your connection or try again later</Text> : null}
                 </View>
             :
             <>
@@ -89,6 +96,7 @@ export default function Gallery({ route }) {
                     index={currentIndex}
                     enablePreload={true}
                     loadingRender={() => <Bubbles size={20} color='#DE5028'/>}
+                    renderFooter={() => <Text>Artist: {posts[currentIndex].artist}</Text>}
                     onChange={position => (position + 1) === posts.length ? getPosts() : null}/>
                 </Modal>
                 <View style={styles.gallery}>
@@ -101,10 +109,9 @@ export default function Gallery({ route }) {
                         ))
                     }
                 </View>
-                <Button onPress={() => getPosts()} title='Load More' color='#DE5028'/>
             </>
             }
-        </ScrollView>
+        </View>
     )
 }
 
