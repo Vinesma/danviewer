@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Button, Modal, Image } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
-import ImageContainer from './ImageContainer';
+import { StyleSheet, View, Modal, Text, FlatList } from 'react-native';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { Bubbles } from 'react-native-loader';
+import ImageContainer from './ImageContainer';
 import axios from 'axios';
 
 export default function Gallery({ route }) {
@@ -11,7 +10,8 @@ export default function Gallery({ route }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [page, setPage] = useState(1);
     const [modalVisible, setModalVisible] = useState(false);
-    const [loading, setloading] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [loadingError, setLoadingError] = useState(false);
 
     const { searchString } = route.params;
 
@@ -20,28 +20,35 @@ export default function Gallery({ route }) {
     }
 
     function createUrlList(array){
-        return array.map(image => {
+        return array.map(elem => {
             return {
-                id: image.id,
-                url: image.file_url,
-                preview_url: image.preview_file_url,
-                artist: image.tag_string_artist,
-                tags: image.tag_string,
+                id: Math.floor(Math.random() * 10000000),
+                url: elem.file_url,
+                preview_url: elem.preview_file_url,
+                artist: elem.tag_string_artist,
+                tags: elem.tag_string,
+                width: elem.image_width,
+                height: elem.image_height,
             }
         });
     }
 
     function getPosts() {
-        const booruType = 'dan' //'test' or 'dan'
+        const booruType = 'dan'; //'test' or 'dan'
         axios.get(`https://${booruType}booru.donmai.us/posts.json?page=${page}&tags=${splitSearchString()}`)
             .then(res => {
                 setPosts(prevPosts => prevPosts.concat(createUrlList(res.data)));
                 setPage(prevPage => prevPage + 1);
+                setLoading(false);
                 
                 console.info(`Fetched! Now on page ${page}`);
-                setloading(false);
             })
-            .catch(err => console.error(`Error in API call to Danbooru posts : ${err}`));
+            .catch(err => {
+                setLoadingError(true);
+                setLoading(true);
+
+                console.error(`Error during API call to ${booruType}booru: ${err}`);
+            });
     }
 
     function cleanPosts() {
@@ -49,15 +56,11 @@ export default function Gallery({ route }) {
         setCurrentIndex(0);
         setPage(1);
         setModalVisible(false);
-        setloading(true);
+        setLoading(true);
+        setLoadingError(false);
+
         console.info('Cleaned up Gallery');
     }
-
-    useEffect(() => {
-        getPosts();
-
-        return () => cleanPosts();
-    }, []);
 
     function showImageViewer(index){
         setCurrentIndex(index);
@@ -69,12 +72,33 @@ export default function Gallery({ route }) {
         setCurrentIndex(0);
     }
 
+    function fetchOnEndOfImageList(index){
+        if ((index + 1) === posts.length){
+            getPosts();
+        }
+    }
+
+    useEffect(() => {
+        getPosts();
+
+        return () => cleanPosts();
+    }, []);
+
     return (
-        <ScrollView style={styles.container}>
+        <View style={styles.container}>
             { loading
             ? 
-                <View style={styles.centeredContainer}>
+                <View style={styles.paddedCenteredContainer}>
                     <Bubbles size={15} color='#DE5028'/>
+                    { loadingError
+                    ?
+                        <Text
+                        style={styles.mainText}
+                        >
+                            Couldn't retrieve posts, check your connection or try again later
+                        </Text>
+                    : null
+                    }
                 </View>
             :
             <>
@@ -89,22 +113,29 @@ export default function Gallery({ route }) {
                     index={currentIndex}
                     enablePreload={true}
                     loadingRender={() => <Bubbles size={20} color='#DE5028'/>}
-                    onChange={position => (position + 1) === posts.length ? getPosts() : null}/>
-                </Modal>
-                <View style={styles.gallery}>
-                    { posts.map((item, index) => (
-                        <ImageContainer
-                        key={item.id}
-                        imageData={item}
-                        index={index}
-                        showImageViewer={showImageViewer}/>
-                        ))
+                    renderFooter={() => <Text style={styles.mainText}>Artist: {posts[currentIndex].artist}</Text>
                     }
-                </View>
-                <Button onPress={() => getPosts()} title='Load More' color='#DE5028'/>
+                    onChange={position => {
+                        setCurrentIndex(position);
+                        fetchOnEndOfImageList(position);
+                    }}
+                    />
+                </Modal>
+                <FlatList
+                style={styles.gallery}
+                data={posts}
+                numColumns={3}
+                onEndReachedThreshold={0.3}
+                onEndReached={() => getPosts()}
+                renderItem={
+                    ({item, index}) => (
+                        <ImageContainer imageData={item} index={index} showImageViewer={showImageViewer}/>
+                    )
+                }
+                />
             </>
             }
-        </ScrollView>
+        </View>
     )
 }
 
@@ -114,17 +145,23 @@ const styles = StyleSheet.create({
         backgroundColor: '#1f202c',
     },
     centeredContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    paddedCenteredContainer: {
         paddingTop: 100,
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
     },
     gallery: {
-        flex: 1,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-around',
-        paddingHorizontal: 5,
+        paddingHorizontal: 4,
         paddingTop: 20,
+    },
+    mainText: {
+        marginBottom: 10,
+        fontSize: 18,
+        color: '#f4f4f4',
     },
 });
